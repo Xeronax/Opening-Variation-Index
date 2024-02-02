@@ -32,7 +32,7 @@ class PositionNode(NodeMixin):
             for move in self.legal_moves:
                 new_board = self.board.copy()
                 new_board.push(move)
-                PositionNode(new_board, False, True, self)
+                PositionNode(new_board, False, False, self)
 
     def print(self):
         print("------" + self.previous_move + "------")
