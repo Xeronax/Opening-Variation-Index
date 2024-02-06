@@ -1,14 +1,13 @@
-from anytree import Node, RenderTree
 import chess
-from position import PositionNode
+import ovi_db
+from position import Position
+
 
 board = chess.Board()
 board.push_uci("e2e4")
 board.push_uci("e7e5")
-root_position: PositionNode = PositionNode(board, True)
-for pre, _, node in RenderTree(root_position):
-    print("%s%s - [%f]" % (pre, node.name, node.eval))
+root_position: Position = Position(board)
 
-# print(RenderTree(root_position))
+ovi_db.print_db()
 
 exit(code=None)
