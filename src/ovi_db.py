@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from position import Position
+from chess import Board
 from typing import List, Tuple, Optional, Union
 from contextlib import closing
 import mysql.connector
@@ -46,7 +47,9 @@ def execute(
             except mysql.connector.Error as err:
                 print("Caught SQL Operation Error\nInciting Syntax: ", operation, "\nError: \n", err)
 
-            return result
+            if isinstance(result, int):
+                return result
+            return result if (len(result) > 0) else None
 
 
 def insert(position: Union[Position, List[Position]]) -> int:
@@ -66,12 +69,18 @@ def insert(position: Union[Position, List[Position]]) -> int:
         return result
 
 
-def get(fen: str) -> Optional[List[Tuple]]:
+def get(fen: str) -> List[Tuple]:
     sql: str = "SELECT * FROM Positions WHERE FEN = %s"
-    return execute(sql, (fen,))  # Comma for single-element tuple
+    result = execute(sql, (fen,))  # Comma for single-element tuple
+    print("Searched for ", fen, " and found ", result)
+    if result is None:
+        insert(Position(Board(fen)))
+        result = execute(sql, (fen,))
+    return result
 
 
 def print_db() -> None:
+    print("Printing DB")
     try:
         for result in execute("SELECT * FROM Positions"):
             print(result)

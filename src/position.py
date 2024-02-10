@@ -1,6 +1,10 @@
 import chess
 import chess.engine
+import os
+from dotenv import load_dotenv
 from typing import Optional, List
+
+load_dotenv()
 
 TIME_LIMIT = 15
 MATE_VALUE = 100
@@ -60,4 +64,4 @@ def normal_name(board: chess.Board) -> str:
         return "Starting Position"
 
 
-engine = chess.engine.SimpleEngine.popen_uci(r"C:\Users\tauru\Downloads\OVI\Opening-Variation-Index\src\stockfish.exe")
+engine = os.getenv("STOCKFISH_PATH")
