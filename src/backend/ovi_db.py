@@ -1,16 +1,19 @@
 from dotenv import load_dotenv
 from position import Position
-from chess import Board
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Union
 from contextlib import closing
 import mysql.connector
 import os
+import logging
 
 load_dotenv()
 host: str = os.getenv('HOST')
 username: str = os.getenv('USER')
 password: str = os.getenv('PASSWORD')
 database: str = os.getenv('DB_NAME')
+
+
+logger = logging.getLogger("mySQL")
 
 
 def execute(
@@ -30,7 +33,11 @@ def execute(
                     for command, value in zip(operation, values or ()):
                         if command.strip().upper().startswith("SELECT"):
                             select = True
-                        cursor.execute(command, value or ())
+                        try:
+                            cursor.execute(command, value or ())
+                        except mysql.connector.Error as err:
+                            logger.error(f"Caught SQL Batch operation error\nInciting Syntax: {operation}\nError:\n{err}")
+                            continue
                     if select:
                         result = cursor.fetchall()
                     else:
@@ -45,11 +52,12 @@ def execute(
                         result = cursor.rowcount
 
             except mysql.connector.Error as err:
-                print("Caught SQL Operation Error\nInciting Syntax: ", operation, "\nError: \n", err)
+                logger.error(f"Caught SQL Operation Error\nInciting Syntax: {operation}\nError: \n{err}")
 
-            if isinstance(result, int):
+            if isinstance(result, int | None):
                 return result
-            return result if (len(result) > 0) else None
+
+            return result if len(result) > 0 else None
 
 
 def insert(position: Union[Position, List[Position]]) -> int:
@@ -59,24 +67,33 @@ def insert(position: Union[Position, List[Position]]) -> int:
         for pos in position:
             sql.append("INSERT INTO Positions (FEN, Evaluation) VALUES (%s, %s)")
             vals.append((pos.fen, pos.eval))
-            print("Batch-adding: ", pos.line)
+            logger.debug(f"Batch-adding: {pos.line}")
         return execute(sql, vals)
     else:
         sql: str = "INSERT INTO Positions (FEN, Evaluation) VALUES (%s, %s)"
         val: tuple = (position.fen, position.eval)
         result = execute(sql, val)
-        print("Inserting (", val, ") at row ", result)
+        logger.debug(f"Inserting {val} at row {result}")
         return result
 
 
-def get(fen: str) -> List[Tuple]:
+def get(fen: Union[str, tuple]) -> list[tuple]:
     sql: str = "SELECT * FROM Positions WHERE FEN = %s"
-    result = execute(sql, (fen,))  # Comma for single-element tuple
-    print("Searched for ", fen, " and found ", result)
-    if result is None:
-        insert(Position(Board(fen)))
-        result = execute(sql, (fen,))
-    return result
+    if isinstance(fen, tuple):
+        unpack_placeholders: str = ", ".join(["%s" for _ in fen])  # Concatenate %s statements together for each query
+        sql = f"SELECT * FROM Positions WHERE FEN IN ({unpack_placeholders})"
+        params = fen  # Pass tuple itself
+    else:
+        params = (fen,)
+    result = execute(sql, params)
+    logger.info(f"Searched for {params} and found {result}")
+    if result is None or len(result) < len(params):
+        positions_to_insert: list[Position] = []
+        for fenstr in params:
+            positions_to_insert.append(Position(fenstr))
+        insert(positions_to_insert)
+
+    return execute(sql, params)
 
 
 def print_db() -> None:

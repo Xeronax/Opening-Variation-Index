@@ -40,9 +40,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.get = void 0;
 var axios_1 = require("axios");
 var endpoint = "http://127.0.0.1:5000";
-function get(fen) {
+function get(fenStrings) {
     return __awaiter(this, void 0, void 0, function () {
+        var fen;
         return __generator(this, function (_a) {
+            fen = "";
+            if (Array.isArray(fenStrings)) {
+                fen = fenStrings.join(',');
+            }
+            else {
+                fen = fenStrings;
+            }
             (0, axios_1.default)({
                 method: 'get',
                 url: "".concat(endpoint, "/query"),

@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from typing import Optional, List
 
 load_dotenv()
+stockfish = os.getenv("STOCKFISH_PATH")
+
 
 TIME_LIMIT = 15
 MATE_VALUE = 100
@@ -12,10 +14,10 @@ MATE_VALUE = 100
 
 class Position:
 
-    def __init__(self, board: chess.Board):
+    def __init__(self, board: chess.Board | str):
 
         # Simple Attributes
-        self.board: chess.Board = board
+        self.board: chess.Board = board if isinstance(board, chess.Board) else chess.Board(board)
         self.previous_move = self.name = normal_name(board)
         self.line: str = board.root().variation_san(board.move_stack)
         self.fen: str = board.fen()
@@ -64,4 +66,4 @@ def normal_name(board: chess.Board) -> str:
         return "Starting Position"
 
 
-engine = os.getenv("STOCKFISH_PATH")
+engine = chess.engine.SimpleEngine.popen_uci(stockfish)
